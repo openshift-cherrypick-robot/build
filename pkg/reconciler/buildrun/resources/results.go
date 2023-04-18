@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strconv"
 
 	build "github.com/shipwright-io/build/pkg/apis/build/v1alpha1"
