@@ -9,9 +9,12 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -191,6 +194,62 @@ func runImageProcessing(ctx context.Context) error {
 		if err := os.WriteFile(flagValues.resultFileImageSize, []byte(strconv.FormatInt(size, 10)), 0400); err != nil {
 			return err
 		}
+	}
+
+	cmd := exec.CommandContext(ctx, "trivy", "image",
+		"--quiet",
+		"--input", flagValues.push,
+		"--output", "/tmp/trivy-results.json",
+		"--format", "json",
+	)
+	cmd.Stderr = os.Stderr
+	log.Printf("Running %s\n", cmd.String())
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to run trivy: %w", err)
+	}
+
+	resultsData, err := ioutil.ReadFile("/tmp/trivy-results.json")
+	if err != nil {
+		return err
+	}
+
+	type TrivyResult struct {
+		Results []struct {
+			Vulnerabilities []struct {
+				VulnerabilityID string `json:"VulnerabilityID"`
+				Severity        string `json:"Severity"`
+			} `json:"Vulnerabilities"`
+		} `json:"Results"`
+	}
+
+	var trivyResult TrivyResult
+	if err := json.Unmarshal(resultsData, &trivyResult); err != nil {
+		return err
+	}
+
+	// TODO use the struct from the CRD definition
+	type Vulnerabilities struct {
+		ID       string `json:"id"`
+		Severity string `json:"severity"`
+	}
+
+	var vulns []Vulnerabilities
+	for _, result := range trivyResult.Results {
+		for _, vuln := range result.Vulnerabilities {
+			vulns = append(vulns, Vulnerabilities{
+				ID:       vuln.VulnerabilityID,
+				Severity: vuln.Severity,
+			})
+		}
+	}
+
+	vulnsData, err := json.Marshal(vulns)
+	if err != nil {
+		return err
+	}
+
+	if err := os.WriteFile("/tekton/results/shp-image-vulnerabilities", vulnsData, 0640); err != nil {
+		return err
 	}
 
 	return nil

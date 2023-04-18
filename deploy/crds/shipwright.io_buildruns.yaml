@@ -6150,6 +6150,18 @@ spec:
                     description: Size holds the compressed size of output image
                     format: int64
                     type: integer
+                  vulnerabilities:
+                    description: List of vulnerabilities detected in the image
+                    items:
+                      description: Vulnerability defines a vulnerability by its ID
+                        and severity
+                      properties:
+                        id:
+                          type: string
+                        severity:
+                          type: string
+                      type: object
+                    type: array
                 type: object
               sources:
                 description: Sources holds the results emitted from the step definition
