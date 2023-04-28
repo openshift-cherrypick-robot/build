@@ -174,28 +174,6 @@ func runImageProcessing(ctx context.Context) error {
 		}
 	}
 
-	// push the image and determine the digest and size
-	log.Printf("Pushing the image to registry %q\n", imageName.String())
-	digest, size, err := image.PushImageOrImageIndex(imageName, img, imageIndex, options)
-	if err != nil {
-		log.Printf("Failed to push the image: %v\n", err)
-		return err
-	}
-
-	// Writing image digest to file
-	if digest != "" && flagValues.resultFileImageDigest != "" {
-		if err := os.WriteFile(flagValues.resultFileImageDigest, []byte(digest), 0400); err != nil {
-			return err
-		}
-	}
-
-	// Writing image size in bytes to file
-	if size > 0 && flagValues.resultFileImageSize != "" {
-		if err := os.WriteFile(flagValues.resultFileImageSize, []byte(strconv.FormatInt(size, 10)), 0400); err != nil {
-			return err
-		}
-	}
-
 	cmd := exec.CommandContext(ctx, "trivy", "image",
 		"--quiet",
 		"--input", flagValues.push,
@@ -250,6 +228,28 @@ func runImageProcessing(ctx context.Context) error {
 
 	if err := os.WriteFile("/tekton/results/shp-image-vulnerabilities", vulnsData, 0640); err != nil {
 		return err
+	}
+
+	// push the image and determine the digest and size
+	log.Printf("Pushing the image to registry %q\n", imageName.String())
+	digest, size, err := image.PushImageOrImageIndex(imageName, img, imageIndex, options)
+	if err != nil {
+		log.Printf("Failed to push the image: %v\n", err)
+		return err
+	}
+
+	// Writing image digest to file
+	if digest != "" && flagValues.resultFileImageDigest != "" {
+		if err := os.WriteFile(flagValues.resultFileImageDigest, []byte(digest), 0400); err != nil {
+			return err
+		}
+	}
+
+	// Writing image size in bytes to file
+	if size > 0 && flagValues.resultFileImageSize != "" {
+		if err := os.WriteFile(flagValues.resultFileImageSize, []byte(strconv.FormatInt(size, 10)), 0400); err != nil {
+			return err
+		}
 	}
 
 	return nil
