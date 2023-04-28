@@ -1,0 +1,32 @@
+---
+apiVersion: shipwright.io/v1alpha1
+kind: ClusterBuildStrategy
+metadata:
+  name: crane-pull
+spec:
+  buildSteps:
+    - name: crane-pull
+      image: gcr.io/go-containerregistry/crane:latest
+      workingDir: $(params.shp-source-root)
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+      env:
+        - name: DOCKER_CONFIG
+          value: /tekton/home/.docker
+        - name: HOME
+          value: /tekton/home
+      command:
+        - crane
+      args:
+        - pull
+        - --format=oci
+        - python:3.4-alpine
+        - $(params.shp-output-directory)
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 65Mi
